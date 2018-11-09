@@ -251,9 +251,15 @@ while (t < params[1])
 		tumour_size = divide(tumour , cell_index_x , cell_index_y , x , y , tumour_size)
 
 		# Add new GAs to daughter cells
+		initial_dvr = tumour[cell_index_x , cell_index_y].dvr
+
 		tumour[cell_index_x , cell_index_y].dvr += rand(poisson_d)
 		tumour[cell_index_x , cell_index_y].res += rand(poisson_r)
 		tumour[cell_index_x , cell_index_y].pgr += rand(poisson_t)
+
+		final_dvr = tumour[cell_index_x , cell_index_y].dvr
+		if (final_dvr-initial_dvr != 0) println("New driver GA at (x,y) = ($cell_index_x,$cell_index_y)") end
+
 
 		tumour[cell_index_x + x , cell_index_y + y].dvr += rand(poisson_d)
 		tumour[cell_index_x + x , cell_index_y + y].res += rand(poisson_r)
