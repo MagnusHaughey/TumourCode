@@ -148,7 +148,6 @@ Random.seed!(params[2])
 
 
 
-
 #================== Initialise tumour ====================#
 
 # Estimate radius of resulting tumour using fitted parameters from previous simulations (slightly over-estimate)
@@ -180,14 +179,11 @@ const bdratio = 0.5
 	Define mutation probailities for driver (d), resistant (r) and passenger 
    	mutations (latter defined implicitly through total mutation probability (t))
 =#
-const µ_t = 0.02
-const µ_d = 4e-5
-const µ_r = 1e-7
 
 # Define Poisson distributions
-poisson_t = Poisson(µ_t - µ_d - µ_r)
-poisson_d = Poisson(µ_d)
-poisson_r = Poisson(µ_r)
+poisson_t = Poisson(params[4] - params[5] - params[6])
+poisson_d = Poisson(params[5])
+poisson_r = Poisson(params[6])
 
 
 # Reset time variable
