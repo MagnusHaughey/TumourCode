@@ -204,7 +204,7 @@ x = 0
 y = 0
 x_tot = 0
 y_tot = 0
-while (t < params[1])
+while (tumour_size < params[1])
 
 	global iter += 1
 

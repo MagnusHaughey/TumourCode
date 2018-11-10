@@ -1,4 +1,4 @@
-maxtime=21.0
+maxsize=1000000
 seed=118
 s=0.3
 µ_t=0.1
