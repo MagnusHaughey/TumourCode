@@ -151,9 +151,9 @@ Random.seed!(params[2])
 #================== Initialise tumour ====================#
 
 # Estimate radius of resulting tumour using fitted parameters from previous simulations (slightly over-estimate)
-area = 10.0*exp(0.68572*params[1])
-radius = (area/pi)^0.5
-radius = float_to_int(radius)
+#area = 10.0*exp(0.68572*params[1])
+radius = (params[1]/pi)^0.5
+radius = float_to_int(1.25*radius)
 
 
 # Define tumour as an array of cells ("normal" tissue modelled as cell with all GAs = -1, ignored by algorithm)
@@ -247,14 +247,14 @@ while (tumour_size < params[1])
 		tumour_size = divide(tumour , cell_index_x , cell_index_y , x , y , tumour_size)
 
 		# Add new GAs to daughter cells
-		initial_dvr = tumour[cell_index_x , cell_index_y].dvr
+		#initial_dvr = tumour[cell_index_x , cell_index_y].dvr
 
 		tumour[cell_index_x , cell_index_y].dvr += rand(poisson_d)
 		tumour[cell_index_x , cell_index_y].res += rand(poisson_r)
 		tumour[cell_index_x , cell_index_y].pgr += rand(poisson_t)
 
-		final_dvr = tumour[cell_index_x , cell_index_y].dvr
-		if (final_dvr-initial_dvr != 0) println("New driver GA at (x,y) = ($cell_index_x,$cell_index_y)") end
+		#final_dvr = tumour[cell_index_x , cell_index_y].dvr
+		#if (final_dvr-initial_dvr != 0) println("New driver GA at (x,y) = ($cell_index_x,$cell_index_y)") end
 
 
 		tumour[cell_index_x + x , cell_index_y + y].dvr += rand(poisson_d)
