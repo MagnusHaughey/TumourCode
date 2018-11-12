@@ -204,12 +204,12 @@ x = 0
 y = 0
 x_tot = 0
 y_tot = 0
-while (tumour_size < params[1])
+while (true)
 
 	global iter += 1
 
 	# Compute estimate of tumour "radius"
-	rad = ceil((iter+1/pi)^0.5)
+	rad = ceil((tumour_size/pi)^0.5)
 	rad = float_to_int(rad)
 
  
@@ -281,11 +281,11 @@ while (tumour_size < params[1])
 	# Write total number of cells after regular number of iterations
 	if (iter%200 == 0)
 
-		max_dvr = log(max_birth)/log(log(2.0) * ((1.0 + params[3])))
-		max_dvr = float_to_int(max_dvr)			# Find maximal number of drivers in an individual cell in tumour
+		#max_dvr = log(max_birth)/log(log(2.0) * ((1.0 + params[3])))
+		#max_dvr = float_to_int(max_dvr)			# Find maximal number of drivers in an individual cell in tumour
 
 		println(NversusT_file , "$t $tumour_size")
-		println("n=$iter, t=$t")
+		println("Iter=$iter, N=$tumour_size")
 
 		# Update max_birth variable if needs be
 		max_dvr = findmax(getfield.(tumour , :dvr))[1]			# getfield.(tumour, :dvr) returns array dvr value of all cells in tumour
@@ -297,6 +297,9 @@ while (tumour_size < params[1])
 
 	# Update global tumour size variable 
 	#global tumour_size = current_size
+
+
+	if (tumour_size > params[1]) break end
 
 
 end
