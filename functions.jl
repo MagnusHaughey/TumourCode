@@ -1,11 +1,17 @@
+
+
+
+
+
+
+
+
 # Define a cell 
 mutable struct cell
 	
 	dvr::Int32
 	res::Int32
 	pgr::Int32
-	#posX::Int32
-	#posY::Int32
 
 end
 
@@ -26,8 +32,8 @@ end
 
 
 
-# Define cell division
-function divide(tumour , cell_index_x::Int , cell_index_y::Int , x::Int , y::Int , tumour_size::Int)
+# Define cell division in volumetirc growth model
+function volumetric_divide(tumour , cell_index_x::Int , cell_index_y::Int , x::Int , y::Int , tumour_size::Int)
 
 	queue = 0
 
@@ -62,6 +68,17 @@ function divide(tumour , cell_index_x::Int , cell_index_y::Int , x::Int , y::Int
 end
 
 
+
+# Define cell division in surface growth model
+function surface_divide(tumour , cell_index_x::Int , cell_index_y::Int , x::Int , y::Int , tumour_size::Int)
+
+
+	
+	
+
+end
+
+
 # Round and parse a given floating point to integer
 function float_to_int(x)
 
@@ -72,3 +89,11 @@ function float_to_int(x)
 	return y_int
     
 end
+
+
+
+
+
+
+
+

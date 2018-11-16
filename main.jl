@@ -9,90 +9,9 @@ include("functions.jl")
 
 #============================================================
 
-8/11/2018
-
-Tumour vector reformulated as a matrix, where a cell with 
-coordinates (x,y) will occupy the [x,y] element of matrix.
-
+*** Space for version comments ***
 
 ============================================================#
-
-#=
-# Define a cell 
-mutable struct cell
-	
-	dvr::Int32
-	res::Int32
-	pgr::Int32
-	#posX::Int32
-	#posY::Int32
-
-end
-
-
-# Function which finds index of cell in tumour positioned at given coordinates
-function findposition(tumour , x::Int , y::Int)
-
-	# Construct two arrays with indices of cells in tumour at given x and y values
-	xhits = findall(in([x]) , getfield.(tumour, :posX))
-	yhits = findall(in([y]) , getfield.(tumour, :posY))
-
-	# Index of cell we want is that which is common to both arrays 
-	index = intersect(xhits , yhits)
-	
-	return index 			# Returns array with indices of common elements in xhits and yhits (so will be a 1d array with a single entry)
-
-end
-
-
-
-# Define cell division
-function divide(tumour , cell_index_x::Int , cell_index_y::Int , x::Int , y::Int , tumour_size::Int)
-
-	queue = 0
-
-	# Count how many cells need to be pushed in the specified direction (quantified by queue variable)
-	while true
-
-		#filled = false
-		if ( tumour[cell_index_x + x*(queue+1) , cell_index_y + y*(queue+1)].dvr == -1 ) # if not occupied
-			break
-		end
-
-		queue += 1
-
-	end 
-
-
-	# Shove glands outwards
-	for j in 1:queue
-
-		tumour[cell_index_x + x*(queue - j + 2) , cell_index_y + y*(queue - j + 2)] = tumour[cell_index_x + x*(queue - j + 1) , cell_index_y + y*(queue - j + 1)]
-
-	end
-
-
-	# Create daughter cell
-	tumour[cell_index_x + x , cell_index_y + y] = cell(tumour[cell_index_x , cell_index_y].dvr , tumour[cell_index_x, cell_index_y].res , tumour[cell_index_x , cell_index_y].pgr)
-
-	tumour_size += 1
-
-	return tumour_size
-
-end
-
-
-# Round and parse a given floating point to integer
-function float_to_int(x)
-
-	minval = min(x - floor(x) , abs(x - ceil(x)))
-	y = floor(x) + (findfirst(isequal(minval) , [x - floor(x) , abs(x - ceil(x))]) - 1)
-	y_int = trunc(Int , y)
-
-	return y_int
-    
-end
-=#
 
 
 #================== Create output files ===================#
@@ -150,6 +69,16 @@ println("----------------------")
 
 # Seed the random number generator
 Random.seed!(params[2])
+
+
+# Determine growth model
+if (params[7] == 0)
+	VOLUMETRIC = true
+	SURFACE = false
+elseif (params[7] == 0)
+	VOLUMETRIC = false
+	SURFACE = true
+end
 
 
 
@@ -249,7 +178,9 @@ while (true)
 	if (rand() < (r_birth/max_birth))
 
 		# Simulate cell division
-		tumour_size = divide(tumour , cell_index_x , cell_index_y , x , y , tumour_size)
+		if VOLUMETRIC
+			tumour_size = volumetric_divide(tumour , cell_index_x , cell_index_y , x , y , tumour_size)
+		end
 
 		# Add new GAs to daughter cells
 		#initial_dvr = tumour[cell_index_x , cell_index_y].dvr
@@ -286,16 +217,12 @@ while (true)
 	# Write total number of cells after regular number of iterations
 	if (iter%200 == 0)
 
-		#max_dvr = log(max_birth)/log(log(2.0) * ((1.0 + params[3])))
-		#max_dvr = float_to_int(max_dvr)			# Find maximal number of drivers in an individual cell in tumour
-
 		println(NversusT_file , "$t $tumour_size")
 		println("Iter=$iter, N=$tumour_size")
 
 		# Update max_birth variable if needs be
 		max_dvr = findmax(getfield.(tumour , :dvr))[1]			# getfield.(tumour, :dvr) returns array dvr value of all cells in tumour
 		global max_birth = log(2.0) * ((1.0 + params[3])^(max_dvr))
-		#println("Updated max_birth variable to $max_birth \n")
 
 	end
 
@@ -308,10 +235,6 @@ while (true)
 
 
 end
-
-#println("<x> = $x_tot")
-#println("<y> = $y_tot")
-
 
 
 
