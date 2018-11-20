@@ -6,12 +6,10 @@ using Random, Distributions
 include("functions.jl")
 
 
+# Declare global variables
+const NEIGHBOURHOOD = 8
+const bdratio = 0.5 	# birth/death-rate ratio
 
-#============================================================
-
-*** Space for version comments ***
-
-============================================================#
 
 
 #================== Create output files ===================#
@@ -34,12 +32,13 @@ open("params.dat") do file
 end
 
 
-# Open file with number of cells versus time 
-filename = chop(filename)
-filename *= "_Nversust.dat"
-NversusT_file = open(filename , "w")
+# Open file for number of cells versus time 
+NversusT_filename = chop(filename)
+NversusT_filename *= "_Nversust.dat"
+NversusT_file = open(NversusT_filename , "w")
 
-
+tumour_filename = chop(filename)
+tumour_filename *= ".dat"
 
 
 
@@ -72,26 +71,24 @@ Random.seed!(params[2])
 
 
 # Determine growth model
-if (params[7] == 0)
-	VOLUMETRIC = true
-	SURFACE = false
-elseif (params[7] == 0)
-	VOLUMETRIC = false
-	SURFACE = true
+MODEL = fill(false , 3)		# List of booleans correpsonding to all available models
+if ( (params[7] < 1) || (params[7] > length(MODEL)) )
+	println("""Error with model variable in "params.dat" file. Exiting...""")
+	exit(0)
 end
+MODEL[params[7]] = true
 
 
 
 #================== Initialise tumour ====================#
 
 # Estimate radius of resulting tumour using fitted parameters from previous simulations (slightly over-estimate)
-#area = 10.0*exp(0.68572*params[1])
 radius = (params[1]/pi)^0.5
 radius = float_to_int(1.25*radius)
 
 
 # Define tumour as an array of cells ("normal" tissue modelled as cell with all GAs = -1, ignored by algorithm)
-tumour = fill( cell(-1,-1,-1) , 2*radius , 2*radius )
+tumour = fill( cell(-1,-1,-1) , (2*radius , 2*radius) )
 
 println("Lattice size: $(2*radius)")
 
@@ -106,26 +103,28 @@ tumour[radius , radius] = cell(0,0,0)
 global tumour_size = 1
 
 
-# Set birth/death rate ratio
-const bdratio = 0.5
-
 #= 
 	Define mutation probailities for driver (d), resistant (r) and passenger 
    	mutations (latter defined implicitly through total mutation probability (t))
 =#
 
 # Define Poisson distributions
-poisson_t = Poisson(params[4] - params[5] - params[6])
-poisson_d = Poisson(params[5])
-poisson_r = Poisson(params[6])
+#poisson_t = Poisson(params[4] - params[5] - params[6])
+#poisson_d = Poisson(params[5])
+#poisson_r = Poisson(params[6])
 
 
 # Reset time variable
 t = 0.0
 
 
-const r_death = bdratio * log(2.0)
+# Define constant death rate for all cells
+const r_death = bdratio * log(2.0)		# Death model 1
 
+
+# Define arrays which will contain relative coordinates of empty neighbours for a chosen cell (for model 2)
+x_nn = fill(0 , NEIGHBOURHOOD)
+y_nn = fill(0 , NEIGHBOURHOOD)
 
 
 
@@ -136,69 +135,75 @@ iter = 0
 max_birth = 0.0
 x = 0
 y = 0
-x_tot = 0
-y_tot = 0
+
 while (true)
 
 	global iter += 1
 
 	# Compute estimate of tumour "radius"
-	rad = ceil((tumour_size/pi)^0.5)
-	rad = float_to_int(rad)
+	#rad = ceil((tumour_size/pi)^0.5)
+	#rad = float_to_int(1.1rad)			# Model 2 requires a slight over-estimation of radius to enable surface cells to be picked by algorithm
+	
+	#lower_bound = findmax([ 0 , radius-rad ])[1]
 
  
 	# Randomly select one cell to divide
 	while(true)
-		global cell_index_x = rand(radius-rad:radius+rad)
-		global cell_index_y = rand(radius-rad:radius+rad)
-		#println("$cell_index_x $cell_index_x")
+		#global cell_index_x = rand(lower_bound:radius+rad)
+		#global cell_index_y = rand(lower_bound:radius+rad)
+
+		global cell_index_x = rand(1:(2*radius))
+		global cell_index_y = rand(1:(2*radius))
 		if !(tumour[cell_index_x , cell_index_y].dvr == -1) break end
 	end
 
 
 	# Compute birth and death rate of cell (params[3] is the selective advantage of a single driver mutation)
-	r_birth = log(2.0) * ((1.0 + params[3])^tumour[cell_index_x , cell_index_y].dvr)
-	#r_death = bdratio * r_birth 		# Model 1
-	#r_death = bdratio * log(2.0)		# Model 2
+	r_birth = log(2.0) * ((1.0 + params[3])^tumour[cell_index_x , cell_index_y].dvr)		# Birth model 1
+	#r_birth = log(2.0) * (1.0 + ((tumour[cell_index_x , cell_index_y].dvr)*params[3]) )		# Birth model 2
+
+
+	#r_death = bdratio * r_birth 		# Death model 2
 
 
 	# Update maximal birth and death rate of all cells 
 	if (r_birth > max_birth) max_birth = r_birth end
 
 
-	# Randomly select the direction in which to divide
-	while(true)
-           global x = rand(-1:1)
-           global y = rand(-1:1)
-           if !((x == 0) && (y == 0)) break end
-    end
-
 
 	# Cell divides with proability r_birth/max_birth
 	if (rand() < (r_birth/max_birth))
 
 		# Simulate cell division
-		if VOLUMETRIC
-			tumour_size = volumetric_divide(tumour , cell_index_x , cell_index_y , x , y , tumour_size)
+		if MODEL[1]
+
+			tumour_size = MODEL1_divide(tumour , cell_index_x , cell_index_y , tumour_size)
+
+		elseif MODEL[2]
+
+			empty_neighbours = 0
+
+			# Check for any neighbouring empty lattice sites
+			for i in -1:1
+				for j in -1:1
+
+					if (tumour[cell_index_x + i , cell_index_y + j].dvr == -1) 	# if not occupied
+						empty_neighbours += 1
+						x_nn[empty_neighbours] = i 	# Store coordinates of empty neighbour
+						y_nn[empty_neighbours] = j
+					end
+				end
+			end
+
+			if (empty_neighbours != 0)
+				tumour_size = MODEL2_divide(tumour, x_nn , y_nn , cell_index_x , cell_index_y , tumour_size, empty_neighbours)
+			end
+
+		elseif MODEL[3]
+
+			tumour_size = MODEL3_divide(tumour , cell_index_x , cell_index_y , tumour_size)
+
 		end
-
-		# Add new GAs to daughter cells
-		#initial_dvr = tumour[cell_index_x , cell_index_y].dvr
-
-		tumour[cell_index_x , cell_index_y].dvr += rand(poisson_d)
-		tumour[cell_index_x , cell_index_y].res += rand(poisson_r)
-		tumour[cell_index_x , cell_index_y].pgr += rand(poisson_t)
-
-		#final_dvr = tumour[cell_index_x , cell_index_y].dvr
-		#if (final_dvr-initial_dvr != 0) println("New driver GA at (x,y) = ($cell_index_x,$cell_index_y)") end
-
-
-		tumour[cell_index_x + x , cell_index_y + y].dvr += rand(poisson_d)
-		tumour[cell_index_x + x , cell_index_y + y].res += rand(poisson_r)
-		tumour[cell_index_x + x , cell_index_y + y].pgr += rand(poisson_t)
-
-
-		#if (tumour[cell_index].dvr == 1 || tumour[tumour_size].dvr == 1) println("New driver mutation after n=$iter steps!") end
 
 
 	elseif (rand() < (r_death/max_birth))
@@ -227,10 +232,6 @@ while (true)
 	end
 
 
-	# Update global tumour size variable 
-	#global tumour_size = current_size
-
-
 	if (tumour_size > params[1]) break end
 
 
@@ -241,21 +242,9 @@ end
 #================== Write data to files ====================#
 
 
-# Open data file
-filename = "DATA/"
-open("params.dat") do file
-
-	for ln in eachline(file)
-		global filename *= ln
-		global filename *= "_"
-	end
-
-end
 
 # Open main data file containing tumour
-filename = chop(filename)
-filename *= ".dat"
-tumourfile = open(filename , "w")
+tumourfile = open(tumour_filename , "w")
 
 
 # Write data
